@@ -1069,7 +1069,16 @@ function showMemory() {
 }
 
 const Manipulator = (function () {
-    const allTables = [new eachHourTotalRidesTable()];
+    const allTables = [
+        new eachHourTotalRidesTable(),
+        new tripDurationBinsEachAreaTotalRidesTable(),
+        new milageBinsEachAreaTotalRidesTable(),
+        new hourDayMonthRidesToFromTable(),
+        new ridesPercentageTable(),
+        new tripDurationBinsTotalRidesTable(),
+        new eachDayTotalRidesTable(),
+        new milageBinsTotalRidesTable()
+    ];
 
     function init() {}
 
@@ -1090,7 +1099,6 @@ const Manipulator = (function () {
 
 const fs = require("fs");
 const nReadlines = require("n-readlines");
-const { start } = require("repl");
 
 const csvfolderExists = fs.existsSync("csv");
 if (!csvfolderExists) fs.mkdirSync("csv");
@@ -1130,7 +1138,7 @@ while ((line = broadbandLines.next())) {
         trueElsNum++;
 
         // save to csv
-        // wstream.write(arrayToCsvLine(dataArr));
+        wstream.write(arrayToCsvLine(dataArr));
 
         // show mem
         if (trueElsNum % 250000 === 0) showMemory();
