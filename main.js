@@ -307,7 +307,7 @@ class eachHourTotalRidesTable extends TableController {
 }
 class milageBinsTotalRidesTable extends TableController {
     constructor() {
-        const columnsArr = ["milage", "rides"];
+        const columnsArr = ["milage", "rides", "km"];
         super("milageBinsTotalRides", columnsArr);
     }
 
@@ -352,7 +352,18 @@ class milageBinsTotalRidesTable extends TableController {
         for (const key of keys_arr) {
             const milage = keys_map[key];
             const rides = this._table[milage];
-            wstream.write(arrayToCsvLine([milage, rides]));
+            const milageStr = milage;
+            const start_milage = parseFloat(milageStr.split("-")[0]);
+            const end_milage = parseFloat(milageStr.split("-")[1]);
+            wstream.write(
+                arrayToCsvLine([
+                    milage,
+                    rides,
+                    `${(start_milage * 1.6).toFixed(1)}-${(
+                        end_milage * 1.6
+                    ).toFixed(1)}`,
+                ])
+            );
         }
     };
 }
@@ -365,12 +376,11 @@ class tripDurationBinsTotalRidesTable extends TableController {
     addToTable = (row) => {
         // some logic
         const { duration } = row;
-        const duration_range = 30;
+        const duration_range = 1800;
         const binIdx = parseInt(duration / duration_range);
-        const index = `${(binIdx * duration_range).toFixed(1)}-${(
-            (binIdx + 1) *
-            duration_range
-        ).toFixed(1)}`;
+        const index = `${((binIdx * duration_range) / 60 / 60).toFixed(1)}-${
+            (((binIdx + 1) * duration_range) / 60 / 60).toFixed(1)
+        }`;
 
         // check if it already has the needed key and increment it OR create one if it does not
         if (this._hasKey(index)) {
@@ -389,24 +399,100 @@ class tripDurationBinsTotalRidesTable extends TableController {
         wstream.write(arrayToCsvLine(this._columns));
 
         // sort keys
-        const keys_map = {};
-        for (const duration of Object.keys(this._table)) {
-            const newKey = parseInt(duration.split("-")[0]);
+        // const keys_map = {};
+        // for (const duration of Object.keys(this._table)) {
+        //     const newKey = parseFloat(duration.split("-")[0]);
 
-            keys_map[newKey] = duration;
-        }
+        //     keys_map[newKey] = duration;
+        // }
 
-        const keys_arr = Object.keys(keys_map).map((el) => parseInt(el));
-        keys_arr.sort((a, b) => a - b);
+        // const keys_arr = Object.keys(keys_map).map((el) => parseInt(el));
+        // keys_arr.sort((a, b) => a - b);
 
         // write contents
-        for (const key of keys_arr) {
-            const duration = keys_map[key];
+        for (const duration of Object.keys(this._table)) {
             const rides = this._table[duration];
             wstream.write(arrayToCsvLine([duration, rides]));
         }
     };
 }
+class tripDurationBinsEachAreaTotalRidesTable extends TableController {
+    constructor() {
+        const columnsArr = ["area_name", "time", "rides"];
+        super("tripDurationBinsEachAreaTotalRides", columnsArr);
+    }
+
+    addToTable = (row) => {
+        // some logic
+        const { from_area, to_area } = row;
+
+        // some logic
+        const { duration } = row;
+        const duration_range = 1800;
+        const binIdx = parseInt(duration / duration_range);
+        const index = `${((binIdx * duration_range) / 60 / 60).toFixed(1)}-${
+            (((binIdx + 1) * duration_range) / 60 / 60).toFixed(1)
+        }`;
+
+        const area_name_to = getAreaNameFromCode(to_area);
+        // check if it already has the needed key and increment it OR create one if it does not
+        if (this._hasKey(area_name_to)) {
+            if (this._hasTableKey(this._table[area_name_to], index)) {
+                this._table[area_name_to][index] += 1;
+            } else {
+                this._table[area_name_to][index] = 1;
+            }
+        } else {
+            this._table[area_name_to] = {
+                [index]: 1,
+            };
+        }
+
+        const area_name_from = getAreaNameFromCode(from_area);
+        // check if it already has the needed key and increment it OR create one if it does not
+        if (this._hasKey(area_name_from)) {
+            if (this._hasTableKey(this._table[area_name_from], index)) {
+                this._table[area_name_from][index] += 1;
+            } else {
+                this._table[area_name_from][index] = 1;
+            }
+        } else {
+            this._table[area_name_from] = {
+                [index]: 1,
+            };
+        }
+    };
+
+    exportToCSV = () => {
+        const wstream = fs.createWriteStream(
+            `${this._csvFolderPath}${this._name}_table.csv`
+        );
+
+        // write columns first
+        wstream.write(arrayToCsvLine(this._columns));
+
+        // // sort keys
+        // const keys_map = {};
+        // for (const milage of Object.keys(this._table)) {
+        //     const newKey = parseFloat(milage.split("-")[0]);
+
+        //     keys_map[newKey] = milage;
+        // }
+
+        // const keys_arr = Object.keys(keys_map).map((el) => parseFloat(el));
+        // keys_arr.sort((a, b) => a - b);
+
+        // write contents
+        for (const area_name of Object.keys(this._table)) {
+            for (const milage of Object.keys(this._table[area_name])) {
+                const rides = this._table[area_name][milage];
+
+                wstream.write(arrayToCsvLine([area_name, milage, rides]));
+            }
+        }
+    };
+}
+
 class ridesPercentageTable extends TableController {
     constructor() {
         const columnsArr = [
@@ -984,82 +1070,7 @@ class milageBinsEachAreaTotalRidesTable extends TableController {
     };
 }
 
-class tripDurationBinsEachAreaTotalRidesTable extends TableController {
-    constructor() {
-        const columnsArr = ["area_name", "time", "rides"];
-        super("tripDurationBinsEachAreaTotalRides", columnsArr);
-    }
 
-    addToTable = (row) => {
-        // some logic
-        const { from_area, to_area } = row;
-
-        // some logic
-        const { duration } = row;
-        const duration_range = 60;
-        const binIdx = parseInt(duration / duration_range);
-        const index = `${(binIdx * duration_range) / 60}-${
-            ((binIdx + 1) * duration_range) / 60
-        }`;
-
-        const area_name_to = getAreaNameFromCode(to_area);
-        // check if it already has the needed key and increment it OR create one if it does not
-        if (this._hasKey(area_name_to)) {
-            if (this._hasTableKey(this._table[area_name_to], index)) {
-                this._table[area_name_to][index] += 1;
-            } else {
-                this._table[area_name_to][index] = 1;
-            }
-        } else {
-            this._table[area_name_to] = {
-                [index]: 1,
-            };
-        }
-
-        const area_name_from = getAreaNameFromCode(from_area);
-        // check if it already has the needed key and increment it OR create one if it does not
-        if (this._hasKey(area_name_from)) {
-            if (this._hasTableKey(this._table[area_name_from], index)) {
-                this._table[area_name_from][index] += 1;
-            } else {
-                this._table[area_name_from][index] = 1;
-            }
-        } else {
-            this._table[area_name_from] = {
-                [index]: 1,
-            };
-        }
-    };
-
-    exportToCSV = () => {
-        const wstream = fs.createWriteStream(
-            `${this._csvFolderPath}${this._name}_table.csv`
-        );
-
-        // write columns first
-        wstream.write(arrayToCsvLine(this._columns));
-
-        // // sort keys
-        // const keys_map = {};
-        // for (const milage of Object.keys(this._table)) {
-        //     const newKey = parseFloat(milage.split("-")[0]);
-
-        //     keys_map[newKey] = milage;
-        // }
-
-        // const keys_arr = Object.keys(keys_map).map((el) => parseFloat(el));
-        // keys_arr.sort((a, b) => a - b);
-
-        // write contents
-        for (const area_name of Object.keys(this._table)) {
-            for (const milage of Object.keys(this._table[area_name])) {
-                const rides = this._table[area_name][milage];
-
-                wstream.write(arrayToCsvLine([area_name, milage, rides]));
-            }
-        }
-    };
-}
 
 // show mem
 function showMemory() {
@@ -1069,16 +1080,8 @@ function showMemory() {
 }
 
 const Manipulator = (function () {
-    const allTables = [
-        new eachHourTotalRidesTable(),
-        new tripDurationBinsEachAreaTotalRidesTable(),
-        new milageBinsEachAreaTotalRidesTable(),
-        new hourDayMonthRidesToFromTable(),
-        new ridesPercentageTable(),
-        new tripDurationBinsTotalRidesTable(),
-        new eachDayTotalRidesTable(),
-        new milageBinsTotalRidesTable()
-    ];
+    // const allTables = [new tripDurationBinsTotalRidesTable(), new tripDurationBinsEachAreaTotalRidesTable(), new ridesPercentageTable(), new hourDayMonthRidesToFromTable(), new milageBinsEachAreaTotalRidesTable(), new milageBinsTotalRidesTable(), new eachHourTotalRidesTable(), new eachDayTotalRidesTable()];
+    const allTables = [new tripDurationBinsTotalRidesTable()];
 
     function init() {}
 
@@ -1100,8 +1103,12 @@ const Manipulator = (function () {
 const fs = require("fs");
 const nReadlines = require("n-readlines");
 
+/*
 const csvfolderExists = fs.existsSync("csv");
 if (!csvfolderExists) fs.mkdirSync("csv");
+
+const csvHDRfolderExists = fs.existsSync("csv-HDMR_TO_FROM");
+if (!csvHDRfolderExists) fs.mkdirSync("csv-HDMR_TO_FROM");
 
 const broadbandLines = new nReadlines("data.csv");
 let wstream = fs.createWriteStream("data-filtered.csv");
@@ -1138,7 +1145,7 @@ while ((line = broadbandLines.next())) {
         trueElsNum++;
 
         // save to csv
-        wstream.write(arrayToCsvLine(dataArr));
+        // wstream.write(arrayToCsvLine(dataArr));
 
         // show mem
         if (trueElsNum % 250000 === 0) showMemory();
@@ -1146,7 +1153,7 @@ while ((line = broadbandLines.next())) {
 
     lineNumber++;
 
-    // if (trueElsNum === 1000000) {
+    // if (trueElsNum === 10000) {
     //     break;
     // }
 }
@@ -1154,110 +1161,29 @@ while ((line = broadbandLines.next())) {
 Manipulator.print();
 Manipulator.exportAllTables();
 
-// const generateTestYearData = (function () {
-//     // code
-//     const { generateRandNum } = require("./utils");
-//     const cols = ["area_name", "date", "hour", "to", "from", "total"];
-//     const areas = [
-//         "Rogers Park",
-//         "West Ridge",
-//         "Uptown",
-//         "Lincoln Square",
-//         "North Center",
-//         "Lake View",
-//         "Lincoln Park",
-//         "Near North Side",
-//         "Edison Park",
-//         "Norwood Park",
-//         "Jefferson Park",
-//         "Forest Glen",
-//         "North Park",
-//         "Albany Park",
-//         "Portage Park",
-//         "Irving Park",
-//         "Dunning",
-//         "Montclare",
-//         "Belmont Cragin",
-//         "Hermosa",
-//         "Avondale",
-//         "Logan Square",
-//         "Humboldt Park",
-//         "West Town",
-//         "Austin",
-//         "West Garfield Park",
-//         "East Garfield Park",
-//         "Near West Side",
-//         "North Lawndale",
-//         "South Lawndale",
-//         "Lower West Side",
-//         "The Loop",
-//         "Near South Side",
-//         "Armour Square",
-//         "Douglas",
-//         "Oakland",
-//         "Fuller Park",
-//         "Grand Boulevard",
-//         "Kenwood",
-//         "Washington Park",
-//         "Hyde Park",
-//         "Woodlawn",
-//         "South Shore",
-//         "Chatham",
-//         "Avalon Park",
-//         "South Chicago",
-//         "Burnside",
-//         "Calumet Heights",
-//         "Roseland",
-//         "Pullman",
-//         "South Deering",
-//         "East Side",
-//         "West Pullman",
-//         "Riverdale",
-//         "Hegewisch",
-//         "Garfield Ridge",
-//         "Archer Heights",
-//         "Brighton Park",
-//         "McKinley Park",
-//         "Bridgeport",
-//         "New City",
-//         "West Elsdon",
-//         "Gage Park",
-//         "Clearing",
-//         "West Lawn",
-//         "Chicago Lawn",
-//         "West Englewood",
-//         "Englewood",
-//         "Greater Grand Crossing",
-//         "Ashburn",
-//         "Auburn Gresham",
-//         "Beverly",
-//         "Washington Heights",
-//         "Mount Greenwood",
-//         "Morgan Park",
-//         "O'Hare",
-//         "Edgewater",
-//     ];
+*/
 
-//     const tStream = fs.createWriteStream("testEachDayHourData.csv");
+const broadbandLines2 = new nReadlines("csv/hourDayMonthRidesToFromTable_table.csv");
+let wSplitterStream = fs.createWriteStream("csv-HDMR_TO_FROM/HDMR_TO_FROM_TABLE-1.csv");
+const splitter = (function() {
+    let _line;
+    let _lineNumber = 1;
+    let _counterFile = 1;
+    let _columnsStr = null;
+    while ((_line = broadbandLines2.next())) {
+        const _lineStr = _line.toString("ascii");
+        if(_lineNumber === 1) {
+            _columnsStr = _lineStr;
+        }
 
-//     tStream.write(arrayToCsvLine(cols), () => {
-//         for (let k = 0; k < areas.length; k++) {
-//             for (let i = 1; i < 13; i++) {
-//                 for (let j = 1; j < 32; j++) {
-//                     for (let hour = 0; hour < 24; hour++) {
-//                         tStream.write(
-//                             arrayToCsvLine([
-//                                 `${areas[k]}`,
-//                                 `2019/${i}/${j}`,
-//                                 `${hour}`,
-//                                 `${generateRandNum(1, 250)}`,
-//                                 `${generateRandNum(1, 250)}`,
-//                                 `${generateRandNum(300, 500)}`,
-//                             ])
-//                         );
-//                     }
-//                 }
-//             }
-//         }
-//     });
-// })();
+        wSplitterStream.write(_lineStr);
+        _lineNumber++;
+        
+        if(_lineNumber % 60000 === 0) {
+            _counterFile++;
+            wSplitterStream = fs.createWriteStream(`csv-HDMR_TO_FROM/HDMR_TO_FROM_TABLE-${_counterFile}.csv`);
+            // write columns again
+            wSplitterStream.write(_columnsStr);
+        }
+    }
+})();
