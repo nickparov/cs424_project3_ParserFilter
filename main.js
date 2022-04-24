@@ -378,9 +378,11 @@ class tripDurationBinsTotalRidesTable extends TableController {
         const { duration } = row;
         const duration_range = 1800;
         const binIdx = parseInt(duration / duration_range);
-        const index = `${((binIdx * duration_range) / 60 / 60).toFixed(1)}-${
-            (((binIdx + 1) * duration_range) / 60 / 60).toFixed(1)
-        }`;
+        const index = `${((binIdx * duration_range) / 60 / 60).toFixed(1)}-${(
+            ((binIdx + 1) * duration_range) /
+            60 /
+            60
+        ).toFixed(1)}`;
 
         // check if it already has the needed key and increment it OR create one if it does not
         if (this._hasKey(index)) {
@@ -430,9 +432,11 @@ class tripDurationBinsEachAreaTotalRidesTable extends TableController {
         const { duration } = row;
         const duration_range = 1800;
         const binIdx = parseInt(duration / duration_range);
-        const index = `${((binIdx * duration_range) / 60 / 60).toFixed(1)}-${
-            (((binIdx + 1) * duration_range) / 60 / 60).toFixed(1)
-        }`;
+        const index = `${((binIdx * duration_range) / 60 / 60).toFixed(1)}-${(
+            ((binIdx + 1) * duration_range) /
+            60 /
+            60
+        ).toFixed(1)}`;
 
         const area_name_to = getAreaNameFromCode(to_area);
         // check if it already has the needed key and increment it OR create one if it does not
@@ -1070,8 +1074,6 @@ class milageBinsEachAreaTotalRidesTable extends TableController {
     };
 }
 
-
-
 // show mem
 function showMemory() {
     for (const [key, value] of Object.entries(process.memoryUsage())) {
@@ -1080,8 +1082,9 @@ function showMemory() {
 }
 
 const Manipulator = (function () {
-    // const allTables = [new tripDurationBinsTotalRidesTable(), new tripDurationBinsEachAreaTotalRidesTable(), new ridesPercentageTable(), new hourDayMonthRidesToFromTable(), new milageBinsEachAreaTotalRidesTable(), new milageBinsTotalRidesTable(), new eachHourTotalRidesTable(), new eachDayTotalRidesTable()];
-    const allTables = [new tripDurationBinsTotalRidesTable()];
+    // All tables that are going to be exported
+    const allTables = [new tripDurationBinsTotalRidesTable(), new tripDurationBinsEachAreaTotalRidesTable(), new ridesPercentageTable(), new hourDayMonthRidesToFromTable(), new milageBinsEachAreaTotalRidesTable(), new milageBinsTotalRidesTable(), new eachHourTotalRidesTable(), new eachDayTotalRidesTable()];
+    // const allTables = [new tripDurationBinsTotalRidesTable()];
 
     function init() {}
 
@@ -1103,7 +1106,7 @@ const Manipulator = (function () {
 const fs = require("fs");
 const nReadlines = require("n-readlines");
 
-/*
+
 const csvfolderExists = fs.existsSync("csv");
 if (!csvfolderExists) fs.mkdirSync("csv");
 
@@ -1145,7 +1148,7 @@ while ((line = broadbandLines.next())) {
         trueElsNum++;
 
         // save to csv
-        // wstream.write(arrayToCsvLine(dataArr));
+        wstream.write(arrayToCsvLine(dataArr));
 
         // show mem
         if (trueElsNum % 250000 === 0) showMemory();
@@ -1161,27 +1164,35 @@ while ((line = broadbandLines.next())) {
 Manipulator.print();
 Manipulator.exportAllTables();
 
-*/
 
-const broadbandLines2 = new nReadlines("csv/hourDayMonthRidesToFromTable_table.csv");
-let wSplitterStream = fs.createWriteStream("csv-HDMR_TO_FROM/HDMR_TO_FROM_TABLE-1.csv");
-const splitter = (function() {
+
+const broadbandLines2 = new nReadlines(
+    "csv/hourDayMonthRidesToFromTable_table.csv"
+);
+let wSplitterStream = fs.createWriteStream(
+    "csv-HDMR_TO_FROM/HDMR_TO_FROM_TABLE-1.csv"
+);
+
+// split hourDayMonthRidesToFromTable into multiple files after everything is exported
+const splitter = (function () {
     let _line;
     let _lineNumber = 1;
     let _counterFile = 1;
     let _columnsStr = null;
     while ((_line = broadbandLines2.next())) {
         const _lineStr = _line.toString("ascii");
-        if(_lineNumber === 1) {
+        if (_lineNumber === 1) {
             _columnsStr = _lineStr;
         }
 
         wSplitterStream.write(_lineStr);
         _lineNumber++;
-        
-        if(_lineNumber % 60000 === 0) {
+
+        if (_lineNumber % 60000 === 0) {
             _counterFile++;
-            wSplitterStream = fs.createWriteStream(`csv-HDMR_TO_FROM/HDMR_TO_FROM_TABLE-${_counterFile}.csv`);
+            wSplitterStream = fs.createWriteStream(
+                `csv-HDMR_TO_FROM/HDMR_TO_FROM_TABLE-${_counterFile}.csv`
+            );
             // write columns again
             wSplitterStream.write(_columnsStr);
         }
